@@ -8,7 +8,7 @@ import numpy as np
 ## Track attributes chosen for tracks
 ## Note: renamed 'valence' to 'positivity' as I thought valence was unclear
 AUDIO_FEATURES = ['acousticness', 'danceability', 'energy', 'instrumentalness',
-    'loudness', 'mode', 'speechiness', 'positivity']
+    'mode', 'speechiness', 'positivity']
 
 ################################################################################
 
@@ -49,9 +49,6 @@ class SpotifyClientData:
                          features['danceability'],
                          features['energy'],
                          features['instrumentalness'],
-                         # divide loudness by -60 so it's on a scale from
-                         # 0.0 - 1.0
-                         features['loudness'] / -60.0,
                          float(features['mode']),
                          features['speechiness'],
                          features['valence']])
