@@ -1,6 +1,14 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from typing import List, Dict, Union
+import numpy as np
+
+################################################################################
+
+## Track attributes chosen for tracks
+## Note: renamed 'valence' to 'positivity' as I thought valence was unclear
+AUDIO_FEATURES = ['acousticness', 'danceability', 'energy', 'instrumentalness',
+    'loudness', 'mode', 'speechiness', 'positivity']
 
 ################################################################################
 
@@ -28,24 +36,25 @@ class SpotifyClientData:
 
         self._top_tracks = [
             {'uri': track['uri'], 'name': track['name'], 'popularity': track['popularity'],
-             'length_ms': track['duration_ms'],
+             'artist': track['artists'][0]['name'], 'length_ms': track['duration_ms'],
              'audio_features': self._get_audio_features(track['uri'])} for track in \
                 self._client.current_user_top_tracks(time_range='long_term',
                                                     limit=50)['items']
         ]
 
-    def _get_audio_features(self, uri: str) -> Dict[str, float]:
+    def _get_audio_features(self, uri: str) -> np.ndarray:
         features = self._client.audio_features([uri])[0]
 
-        return {'acousticness': features['acousticness'],
-                'danceability': features['danceability'],
-                'energy': features['energy'],
-                'instrumentalness': features['instrumentalness'],
-                # divide loudness by -60 so it's on a scale from 0.0 - 1.0
-                'loudness': features['loudness'] / -60.0,
-                'mode': features['mode'],
-                'speechiness': features['speechiness'],
-                'valence': features['valence']}
+        return np.array([features['acousticness'],
+                         features['danceability'],
+                         features['energy'],
+                         features['instrumentalness'],
+                         # divide loudness by -60 so it's on a scale from
+                         # 0.0 - 1.0
+                         features['loudness'] / -60.0,
+                         float(features['mode']),
+                         features['speechiness'],
+                         features['valence']])
 
     def get_client_name(self) -> str:
         return self._client_name
@@ -53,11 +62,5 @@ class SpotifyClientData:
     def get_top_artists(self) -> List[Dict[str, Union[str, int, List[str]]]]:
         return self._top_artists
 
-    def get_top_tracks(self) -> List[Dict[str, Union[str, int, Dict[str, float]]]]:
+    def get_top_tracks(self) -> List[Dict[str, Union[str, int, np.ndarray]]]:
         return self._top_tracks
-
-# Get favourite genres of user, based on top longterm 50 artists for user and the genres they belong to
-# user_top_genres = list(pd.core.common.flatten(
-#     list(map(lambda artist: longterm_top_artists[artist]['genres'],
-#              longterm_top_artists))
-# ))
