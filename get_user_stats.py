@@ -208,10 +208,3 @@ def plot_user_track_pca(user_1_tracks: List[Dict[str, Union[str, int, Dict[str, 
     plt.title(f"Similarity of top tracks for {user_1_name} and {user_2_name}")
 
     plt.savefig(f"{out_dir}/users_track_pca.png")
-
-################################################################################
-
-from credentials import *
-from SpotifyClientData import SpotifyClientData, AUDIO_FEATURES
-
-client = SpotifyClientData(CLIENT_ID, CLIENT_SECRET, APP_REDIRECT_URI)
