@@ -1,11 +1,14 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from typing import List, Dict, Union, Optional
 from collections import Counter
-from SpotifyClientData import SpotifyClientData, AUDIO_FEATURES
-import matplotlib.pyplot as plt
+
+from SpotifyClientData import AUDIO_FEATURES
 
 ################################################################################
 
@@ -107,8 +110,8 @@ def plot_track_features(tracks: List[Dict[str, Union[str, int, np.ndarray]]],
                                           average_track_features[1],
                                           average_track_features[2],
                                           average_track_features[3],
-                                          average_track_features[6],
-                                          average_track_features[7]]})
+                                          average_track_features[5],
+                                          average_track_features[6]]})
 
     sns.barplot(data = features_df,
                 x = 'feature',
@@ -132,8 +135,11 @@ def get_most_similar_track(user_1_tracks: List[Dict[str, Union[str, int, Dict[st
 
     If there are ties for most similar tracks in user_2_tracks, return the one
     that appears first in user_2_tracks.
+
+    If either user has no tracks, or one user's tracks completely overlaps with
+    the other user's tracks, return None.
     """
-    # TODO - check case where only 1 track
+    # TODO - check case where only 1 track for either user
     # remove all overlapping tracks between users
     user_1_tracks_unique = [track for track in user_1_tracks if track['uri'] \
         not in [track['uri'] for track in user_2_tracks]]
@@ -141,7 +147,7 @@ def get_most_similar_track(user_1_tracks: List[Dict[str, Union[str, int, Dict[st
     user_2_tracks_unique = [track for track in user_2_tracks if track['uri'] \
         not in [track['uri'] for track in user_1_tracks]]
 
-    if not user_1_tracks_unique or user_2_tracks_unique:
+    if not user_1_tracks_unique or not user_2_tracks_unique:
         return
 
     # get audio feature vectors for unique tracks from each user
@@ -162,5 +168,50 @@ def get_most_similar_track(user_1_tracks: List[Dict[str, Union[str, int, Dict[st
     return f"{most_similar_track['artist']} - {most_similar_track['name']}"
 
 
-def plot_user_track_pca():
-    pass
+def plot_user_track_pca(user_1_tracks: List[Dict[str, Union[str, int, Dict[str, float]]]],
+                        user_2_tracks: List[Dict[str, Union[str, int, Dict[str, float]]]],
+                        user_1_name: str,
+                        user_2_name: str,
+                        out_dir: str = '.') -> None:
+    """Creates and writes a PCA plot for user_1_name and user_2_name's top tracks.
+    """
+    # 1) make dataframes for each user's track features
+    user_1_df = pd.DataFrame([track['audio_features'] for track in user_1_tracks],
+                            columns=AUDIO_FEATURES)
+    user_1_df['user'] = user_1_name
+
+    user_2_df = pd.DataFrame([track['audio_features'] for track in user_2_tracks],
+                            columns=AUDIO_FEATURES)
+    user_2_df['user'] = user_2_name
+
+    # 2) combine these dataframes
+    all_user_df = pd.concat([user_1_df, user_2_df]).reset_index()
+
+    # 3) standardize each audio feature for sd = 1 and mean = 0
+    audio_features_standardized = StandardScaler().fit_transform(
+        all_user_df.loc[:, AUDIO_FEATURES].values
+    )
+
+    # 4) perform PCA on standardized features
+    pca = PCA(n_components=2)
+    pca_audio_features = pca.fit_transform(audio_features_standardized)
+    pca_df = pd.DataFrame(data=pca_audio_features,
+                          columns=['pc1', 'pc2']).assign(
+                            user=all_user_df['user']
+                          )
+
+    # 5) plot principle components 1 + 2, labelling points by which user they
+    #    belong to, then save the plot to out_dir
+    sns.scatterplot(data=pca_df, x='pc1', y='pc2', hue='user')
+    plt.xlabel(f"PC1 ({round(pca.explained_variance_ratio_[0] * 100, 3)}%)")
+    plt.ylabel(f"PC2 ({round(pca.explained_variance_ratio_[1] * 100, 3)}%)")
+    plt.title(f"Similarity of top tracks for {user_1_name} and {user_2_name}")
+
+    plt.savefig(f"{out_dir}/users_track_pca.png")
+
+################################################################################
+
+from credentials import *
+from SpotifyClientData import SpotifyClientData, AUDIO_FEATURES
+
+client = SpotifyClientData(CLIENT_ID, CLIENT_SECRET, APP_REDIRECT_URI)
