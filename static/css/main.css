@@ -1,0 +1,15 @@
+body {
+    color: #EEEEEE;  /* Dark grey */
+    background-color: #000000;  /* Black */
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Arial', sans-serif;
+    font-size: 36px;
+    font-weight: normal;
+}
+
+p {
+    font-family: 'Arial', sans-serif;
+    font-size: 18px;
+}
